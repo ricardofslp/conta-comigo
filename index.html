@@ -194,9 +194,21 @@ body.on-home #lia{display:none}
 #liaBubble b{color:var(--orange);font-family:'Andika',sans-serif;font-size:1.25em}
 #home .mascot.talk{animation:talk .45s ease-in-out infinite alternate}
 @media (max-width:420px){.menu{gap:12px}.card{padding:14px 8px}.lvl{font-size:16px}}
+
+/* --- correções 22/11/2026 --- */
+.screen>*{flex-shrink:0}
+#sPay>*{flex-shrink:0}
+#loading{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .4s}
+#loading.hide{opacity:0;pointer-events:none}
+#loading .box{display:flex;flex-direction:column;align-items:center;gap:14px;font-size:clamp(20px,4vw,26px);font-weight:600;color:var(--ink);text-align:center;padding:20px}
+#loading .owl{font-size:90px;line-height:1;animation:bob 1.6s ease-in-out infinite}
+#loading .bar{width:min(70vw,320px);height:18px;border-radius:9px;background:#fff;box-shadow:var(--shadow);overflow:hidden}
+#loading .bar i{display:block;height:100%;width:3%;background:var(--green);border-radius:9px;transition:width .2s}
+@media (max-width:600px){#lia:not(.talk) #liaOwl{font-size:42px;opacity:.5;pointer-events:none}}
 </style>
 </head>
 <body>
+<div id="loading"><div class="box"><div class="owl">🦉</div><div id="loadMsg">A Lia está a chegar…</div><div class="bar"><i id="loadBar"></i></div></div></div>
 <!-- INÍCIO -->
 <section id="home" class="screen active">
   <div class="topbar">
@@ -509,9 +521,33 @@ let audioPack;            // undefined = a carregar · null = falhou · objeto =
 const bufCache = {};
 const keyOf = p => typeof p === 'object' ? (p.target ? 'T|' : '') + p.t : p;
 window.__missing = new Set();
+
+/* ---------- Carregar a voz gravada, com barra de progresso ----------
+   Enquanto carrega, mostra o ecrã "A Lia está a chegar…" em vez de falar com a voz do telemóvel. */
+async function fetchJSONProgress(url, onp) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status);
+  const len = +r.headers.get('Content-Length') || 0, gz = /gzip|br|deflate/.test(r.headers.get('Content-Encoding') || '');
+  if (!r.body || !r.body.getReader || !len) return r.json();
+  const total = gz ? len / 0.76 : len, rd = r.body.getReader(), parts = [];
+  let got = 0;
+  for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; onp && onp(Math.min(.99, got / total)); }
+  return JSON.parse(await new Blob(parts).text());
+}
+let loadingTimer = null;
+function loadingShow(on, frac) {
+  const el = document.getElementById('loading'); if (!el) return;
+  el.classList.toggle('hide', !on);
+  if (frac != null) document.getElementById('loadBar').style.width = Math.max(3, frac * 100) + '%';
+  clearTimeout(loadingTimer);
+  if (on) loadingTimer = setTimeout(() => el.classList.add('hide'), 30000);   // nunca prender a criança mais de 30 s
+}
 async function loadAudio() {
-  try { const r = await fetch('audio/pt.json'); if (!r.ok) throw new Error(r.status); audioPack = await r.json(); }
+  const showIt = voiceMode === 'natural';
+  loadingShow(showIt, 0);
+  try { audioPack = await fetchJSONProgress('audio/pt.json', f => showIt && loadingShow(true, f)); }
   catch (e) { audioPack = null; }
+  loadingShow(false);
   refreshVoiceBanner();
   if ($('#parents').classList.contains('on')) renderVoiceSettings();
 }
@@ -695,7 +731,13 @@ function levelBar(container, levels, current, onPick) {
     container.appendChild(b);
   });
 }
-const levelIntro = (lv, n, instr) => [N(pick(SAY.start), .6), SAY.levels[n - 1], lv.desc, instr];
+// a explicação completa só na primeira vez de cada nível; depois, só "Vamos jogar!"
+const levelIntro = (lv, n, instr) => {
+  const k = 'intro_' + lv.desc;
+  if (store.get(k, false)) return [N(pick(SAY.start), .6)];
+  store.set(k, true);
+  return [N(pick(SAY.start), .6), SAY.levels[n - 1], lv.desc, instr];
+};
 const praiseText = () => N(pick(SAY.praise));
 const showText = p => typeof p === 'object' ? (p.show || p.t) : p;
 const starsFor = mistakes => mistakes === 0 ? 3 : mistakes <= Math.ceil(ROUND * 0.6) ? 2 : 1;
@@ -922,7 +964,7 @@ function startQuiz(cfg) {
 }
 function renderQuestion() {
   const q = quiz.questions[quiz.i];
-  dots($('#quizDots'), ROUND, quiz.i);
+  dots($('#quizDots'), quiz.questions.length, quiz.i);
   $('#quizShow').innerHTML = q.show || '';
   $('#quizShow').style.display = q.show ? '' : 'none';
   const box = $('#quizOpts'); box.innerHTML = '';
@@ -948,6 +990,8 @@ function answer(btn, opt) {
   idleStop(); idleCount = 0;
   if (opt === q.answer) {
     quiz.locked = true;
+    // o que falhou volta a aparecer no fim da ronda (uma vez)
+    if (q.missed && !q.repeat) quiz.questions.push(Object.assign({}, q, { missed: false, repeat: true, options: shuffle(q.options) }));
     quiz.streak = q.missed ? 0 : quiz.streak + 1;
     liaMood('happy'); btn.classList.add('right');
     $$('#quizOpts .opt').forEach(o => { if (o !== btn) o.classList.add('fade'); });
@@ -963,7 +1007,7 @@ function answer(btn, opt) {
 function nextQuestion() {
   if (!quiz) return;
   quiz.i++;
-  if (quiz.i >= ROUND) { const q = quiz; quiz = null; finish(starsFor(q.mistakes), q.again, q.next, q.act, q.level); return; }
+  if (quiz.i >= quiz.questions.length) { const q = quiz; quiz = null; finish(starsFor(q.mistakes), q.again, q.next, q.act, q.level); return; }
   renderQuestion();
   say(pick(SAY.next), () => askQuestion());
 }
