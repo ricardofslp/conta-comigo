@@ -205,6 +205,14 @@ body.on-home #lia{display:none}
 #loading .bar{width:min(70vw,320px);height:18px;border-radius:9px;background:#fff;box-shadow:var(--shadow);overflow:hidden}
 #loading .bar i{display:block;height:100%;width:3%;background:var(--green);border-radius:9px;transition:width .2s}
 @media (max-width:600px){#lia:not(.talk) #liaOwl{font-size:42px;opacity:.5;pointer-events:none}}
+
+.album{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:12px;width:100%;max-width:760px}
+.stk{aspect-ratio:1;border-radius:22px;background:#fff;box-shadow:var(--shadow);display:grid;place-items:center;font-size:clamp(40px,9vw,54px);border:none;font-family:system-ui,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.stk.no{background:#ECE8F6;color:#C3BCD8;font-size:32px;font-family:'Andika',sans-serif;font-weight:700;box-shadow:inset 0 3px 0 rgba(0,0,0,.05)}
+.stk.new{animation:pop .6s 3;outline:5px solid var(--yellow)}
+.newstk{display:flex;align-items:center;gap:12px;background:#FFF6D9;border-radius:22px;padding:8px 18px;font-size:20px;font-weight:600}
+.newstk .big{font-size:56px;animation:pop .6s 2;font-family:system-ui,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+#rNext.suggest{animation:pulse 1.1s ease-in-out infinite}
 </style>
 </head>
 <body>
@@ -228,6 +236,7 @@ body.on-home #lia{display:none}
     <button class="card c-pink" data-go="train"><span class="big">🚂</span><span class="lbl">Comboio dos números</span></button>
     <button class="card c-teal" data-go="shop"><span class="big">🛒</span><span class="lbl">Loja da fruta</span></button>
   </div>
+  <div class="homebar"><button class="pill press" id="btnAlbum">📒 Caderneta</button></div>
   <div class="homebar" id="otherGames"></div>
   <div id="noVoice" class="novoice" style="display:none">🔇 <b>Aqui o jogo não tem voz.</b><br>Este navegador não deixa o jogo falar. No Android, abra o jogo no <b>Google Chrome</b>.</div>
 </section>
@@ -313,11 +322,22 @@ body.on-home #lia{display:none}
 </section>
 
 <!-- RECOMPENSA -->
+<section id="album" class="screen">
+  <div class="topbar">
+    <button class="iconbtn" data-home aria-label="Início">🏠</button>
+    <h2>A minha caderneta</h2>
+    <div class="starbox" id="albumCount"></div>
+  </div>
+  <p class="hint">Cada jogo que acabas dá-te um autocolante novo!</p>
+  <div class="album" id="albumGrid"></div>
+</section>
+
 <section id="reward" class="screen">
   <div class="rewardbox">
     <div style="font-size:80px;line-height:1">🦉</div>
     <h1 id="rTitle"></h1>
     <div class="bigstars" id="rStars"><span>⭐</span><span>⭐</span><span>⭐</span></div>
+    <div class="newstk" id="rSticker"></div>
     <div class="row">
       <button class="iconbtn bigbtn" id="rAgain" aria-label="Outra vez">🔁</button>
       <button class="iconbtn bigbtn" id="rNext">Nível ⏭</button>
@@ -430,6 +450,8 @@ const SAY = {
   noMatch: ['Não são iguais.', 'Essas não são iguais. Lembra-te onde estão!'],
   noMatchNum: ['Não combinam.', 'Essas não combinam. Conta bem!'],
   memoDone: 'Encontraste todos os pares!',
+  suggestNext: 'Estás a ir muito bem! Vamos para o nível seguinte? Toca no botão verde.',
+  sticker: 'Ganhaste um autocolante para a tua caderneta!', album: 'Esta é a tua caderneta de autocolantes.', albumEmpty: 'Ainda não tens autocolantes. Joga para ganhares!',
   // os números
   range11: 'Agora os números grandes, até vinte!',
   // comboio
@@ -509,7 +531,42 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('vamoscontar_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('vamoscontar_' + k, JSON.stringify(v)); } catch (e) {} }
 };
-const state = { stars: store.get('stars', 0) };
+const STICKERS = ['🦄','🐉','🦖','🦕','🐙','🦋','🐞','🐢','🦊','🐼','🐨','🦁','🐯','🐸','🐵','🐧','🦉','🐳','🐬','🦩',
+  '🌈','⭐','🌙','☀️','🚀','🛸','🎈','🎁','🍦','🍩','🍭','🧁','🍉','🍓','🌻','🌷','🍄','⚽','🎨','🏰'];
+/* ---------- Estrelas e caderneta comuns aos três jogos ----------
+   No GitHub Pages os três jogos estão no mesmo domínio e partilham estes valores (prefixo lia_). */
+const shared = {
+  get(k, d) { try { const v = localStorage.getItem('lia_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('lia_' + k, JSON.stringify(v)); } catch (e) {} }
+};
+(function migrateShared() {
+  // primeira vez: juntar as estrelas que cada jogo já tinha e os autocolantes do Vamos Brincar!
+  if (shared.get('stars', null) === null) {
+    let t = 0;
+    for (const g of ['vamosler', 'vamoscontar', 'vamosbrincar']) { try { t += +JSON.parse(localStorage.getItem(g + '_stars') || '0') || 0; } catch (e) {} }
+    shared.set('stars', t);
+  }
+  if (shared.get('stickers', null) === null) {
+    let s = []; try { s = JSON.parse(localStorage.getItem('vamosbrincar_stickers') || '[]') || []; } catch (e) {}
+    shared.set('stickers', s);
+  }
+})();
+function addStars(n) { const t = shared.get('stars', 0) + n; shared.set('stars', t); return t; }
+function giveSticker() {
+  const own = shared.get('stickers', []), free = STICKERS.filter(s => !own.includes(s));
+  if (!free.length) return null;
+  const s = free[Math.floor(Math.random() * free.length)]; own.push(s); shared.set('stickers', own); return s;
+}
+// rondas seguidas com 3 estrelas no mesmo nível (para a Lia sugerir o nível seguinte)
+function levelStreak(earned) {
+  const scr = document.querySelector('.screen.active'), chip = scr && scr.querySelector('.lvl.on');
+  if (!chip) return 0;
+  const title = (scr.querySelector('h2') || {}).textContent || '';
+  const k = 'streak_' + scr.id + '_' + title + '_' + chip.textContent;
+  const n = earned === 3 ? store.get(k, 0) + 1 : 0;
+  store.set(k, n); return n;
+}
+const state = { stars: shared.get('stars', 0) };
 let ROUND = store.get('round', 5);
 let childName = store.get('childName', '');
 const N = (s, prob = .5) => childName && Math.random() < prob ? { t: s, show: s.replace(/([!.?])?$/, ', ' + childName + '$1') } : s;
@@ -1249,17 +1306,29 @@ function renderProgress() {
 }
 function finish(earned, again, next, act, level) {
   if (act) record(act, earned, level);
-  state.stars += earned; store.set('stars', state.stars);
+  state.stars = addStars(earned);
+  const streak = levelStreak(earned), stk = giveSticker();
   againFn = again; nextFn = earned === 3 ? next : null;
   show('reward');
   $('#rNext').style.display = nextFn ? '' : 'none';
+  $('#rNext').classList.toggle('suggest', !!nextFn && streak >= 2);
+  $('#rSticker').style.display = stk ? '' : 'none';
+  $('#rSticker').innerHTML = stk ? `<span class="big">${stk}</span><span>Autocolante novo!<br><small>Vê-o na caderneta 📒</small></span>` : '';
   const title = SAY.rTitles[earned - 1];
   $('#rTitle').textContent = title;
   $$('#rStars span').forEach((s, k) => { s.className = ''; setTimeout(() => { s.classList.add('in'); if (k >= earned) s.classList.add('off'); else tones([660 + k * 180], .12); }, 400 + k * 450); });
   confetti(); liaMood('happy');
   setTimeout(() => updateStars(true), 1800);
-  say([N(title, 1), SAY.won[earned - 1], nextFn ? SAY.nextLevel : SAY.playAgain]);
+  say([N(title, 1), SAY.won[earned - 1], stk ? SAY.sticker : null, nextFn ? (streak >= 2 ? SAY.suggestNext : SAY.nextLevel) : SAY.playAgain]);
 }
+
+function renderAlbum(fresh) {
+  const own = shared.get('stickers', []);
+  $('#albumGrid').innerHTML = STICKERS.map(s => own.includes(s) ? `<button class="stk${s === fresh ? ' new' : ''}">${s}</button>` : `<div class="stk no">?</div>`).join('');
+  $('#albumCount').textContent = `${own.length} / ${STICKERS.length}`;
+  $$('#albumGrid button.stk').forEach(b => b.onclick = () => { sfxTap(); b.classList.remove('new'); void b.offsetWidth; b.classList.add('new'); });
+}
+$('#btnAlbum').onclick = () => { sfxTap(); renderAlbum(); show('album'); say(shared.get('stickers', []).length ? SAY.album : SAY.albumEmpty); };
 $('#rAgain').onclick = () => { sfxTap(); againFn && againFn(); };
 $('#rNext').onclick = () => { sfxTap(); nextFn && nextFn(); };
 
