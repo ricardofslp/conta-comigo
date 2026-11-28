@@ -18,6 +18,6 @@ Depois da primeira visita, o jogo funciona **sem internet**.
 - Vamos Brincar! — https://ricardofslp.github.io/vamos-brincar/
 
 ## Créditos
-- **Voz em português:** Fernanda (pt-PT-FernandaNeural), voz neural do Microsoft Azure AI Speech.
+- **Voz em português:** Kore, voz do Google Gemini TTS (gemini-3.1-flash-tts-preview); algumas falas e os sons das letras usam a Fernanda (pt-PT-FernandaNeural, Microsoft Azure AI Speech).
 - **Tipos de letra:** Andika (SIL International) e Fredoka, ambos com a licença SIL Open Font License 1.1 (ver `fonts/`).
 - Os desenhos são emojis do próprio dispositivo.

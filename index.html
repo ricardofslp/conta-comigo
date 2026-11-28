@@ -427,7 +427,7 @@ const SAY = {
   praise: ['Muito bem!', 'Boa!', 'Fantástico!', 'Isso mesmo!', 'Excelente!', 'Uau!', 'Que espetáculo!', 'Estás a ir tão bem!', 'Acertaste!'],
   streak: ['Três seguidas! Estás imparável!', 'Mais uma! Que rapidez!', 'Estás a arrasar!'],
   idle: ['Então? Estou à espera.', 'Vá, tu consegues!', 'Precisas de ajuda? Ouve outra vez.'],
-  retry: ['Hmm… não é esse. Tenta outra vez.', 'Quase! Tenta outra vez.', 'Ups! Experimenta outro.', 'Esse não. Olha bem e tenta outra vez.'],
+  retry: ['Hmm… não é esse. Experimenta outra vez.', 'Quase! Tenta outra vez.', 'Ups! Experimenta outro.', 'Esse não. Olha bem e tenta outra vez.'],
   next: ['Próxima!', 'Agora esta.', 'Mais uma!', 'E agora?'],
   won: ['Ganhaste uma estrela!', 'Ganhaste duas estrelas!', 'Ganhaste três estrelas!'],
   rTitles: ['Boa tentativa!', 'Muito bem!', 'Fantástico!'],
@@ -442,12 +442,12 @@ const SAY = {
   pressDone: 'Quando acabares, toca no botão verde.',
   // onde há mais
   whereMore: 'Onde há mais?', whereLess: 'Onde há menos?',
-  bigger: 'Qual é o número maior?', smaller: 'Qual é o número mais pequeno?',
+  bigger: 'Qual é o número maior?', smaller: 'Qual é o número mais pequenino?',
   hereMore: 'Aqui há mais!', hereLess: 'Aqui há menos!',
   // memória
   memoIntro: 'Vira duas cartas de cada vez e encontra os pares iguais.',
   memoNumIntro: 'Encontra o número e a quantidade que combinam.',
-  noMatch: ['Não são iguais.', 'Essas não são iguais. Lembra-te onde estão!'],
+  noMatch: ['Não são iguais.', 'Essas não são iguais. Vê se te lembras de onde estão!'],
   noMatchNum: ['Não combinam.', 'Essas não combinam. Conta bem!'],
   memoDone: 'Encontraste todos os pares!',
   suggestNext: 'Estás a ir muito bem! Vamos para o nível seguinte? Toca no botão verde.',
@@ -482,7 +482,7 @@ const LEVELS = {
   memory: [
     { label: '3 pares', desc: 'Três pares de animais.', pairs: 3, cols: 3 },
     { label: '4 pares', desc: 'Quatro pares de animais.', pairs: 4, cols: 4 },
-    { label: 'Número e quantidade', desc: 'Números e quantidades.', pairs: 4, cols: 4, nums: true },
+    { label: 'Número e quantidade', desc: 'Junta cada número à sua quantidade.', pairs: 4, cols: 4, nums: true },
     { label: '6 pares', desc: 'Seis pares! Puxa pela memória.', pairs: 6, cols: 4 }
   ],
   train: [
@@ -494,7 +494,7 @@ const LEVELS = {
   shop: [
     { label: 'Moedas de 1 €', desc: 'Vamos às compras com moedas de um euro.', instr: 'Toca nas moedas para as pores na mão. Se puseres demais, toca na mão para as tirar.', lo: 1, hi: 5, coins: [1] },
     { label: 'Moedas de 1 € e 2 €', desc: 'Agora há moedas de dois euros!', instr: 'A moeda grande vale dois euros. A pequena vale um.', lo: 2, hi: 8, coins: [1, 2] },
-    { label: 'Duas frutas', desc: 'Agora compramos duas frutas.', instr: 'Junta os dois preços e escolhe quanto custa tudo.', lo: 1, hi: 4, sum: true }
+    { label: 'Duas frutas', desc: 'Agora compramos duas frutas.', instr: 'Soma os dois preços e escolhe quanto custa tudo.', lo: 1, hi: 4, sum: true }
   ]
 };
 const ACTS = { numbers: 'Os números', count: 'Conta comigo', more: 'Onde há mais?', memory: 'Jogo da memória', train: 'Comboio dos números', shop: 'Loja da fruta' };
